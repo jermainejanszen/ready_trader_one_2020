@@ -1,0 +1,4 @@
+2020-03-16 15:50:06,885 [INFO   ] [APP] autotrader started with arguments={run.py}
+2020-03-16 15:50:06,885 [INFO   ] [APP] configuration={"Execution":{"Host":"127.0.0.1","Port":12345},"Information":{"AllowBroadcast":false,"Interface":"0.0.0.0","ListenAddress":"239.255.1.1","Port":12346},"TeamName":"TraderOne","Secret":"secret"}
+2020-03-16 15:57:30,123 [INFO   ] [APP] SIGINT signal received - shutting down...
+2020-03-16 15:57:30,124 [INFO   ] [APP] closing event loop
