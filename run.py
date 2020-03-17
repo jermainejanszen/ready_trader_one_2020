@@ -22,7 +22,7 @@ def main():
     """Run a match."""
     # To add another auto-trader add its python module name to this list and
     # add it to the 'Traders' section of the exchange.json file.
-    trader_names = ["autotrader", "example1", "example2"]
+    trader_names = ["autotrader", "example1", "example2", "alexs_trader"]
 
     with concurrent.futures.ProcessPoolExecutor(max_workers=len(trader_names) + 1) as executor:
         exchange = executor.submit(ready_trader_one.exchange.main)

@@ -17,6 +17,7 @@ class AutoTrader(BaseAutoTrader):
 
     # Counters
     currentActiveOrders = 0
+    highestSequenceNum = -1
 
     # States
     bidPrice = 0
@@ -28,7 +29,7 @@ class AutoTrader(BaseAutoTrader):
     priceDirection = 0
 
     # Parameters
-    desiredSpread = 
+    desiredSpread = 0.03
 
     def __init__(self, loop: asyncio.AbstractEventLoop):
         """Initialise a new instance of the AutoTrader class."""
@@ -51,6 +52,10 @@ class AutoTrader(BaseAutoTrader):
         prices are reported along with the volume available at each of those
         price levels.
         """
+        if sequence_number < self.highestSequenceNum:
+            return
+        else:
+            this.highestSequenceNum = sequence_number
 
         if instrument == Instrument.Future:
             weightedAskPrices = []
@@ -79,6 +84,7 @@ class AutoTrader(BaseAutoTrader):
 
             self.theoPrice = newMiddlePrice + gapToTheo
 
+            # Making orders
 
 
         pass
@@ -110,4 +116,14 @@ class AutoTrader(BaseAutoTrader):
         Each trade tick is a pair containing a price and the number of lots
         traded at that price since the last trade ticks message.
         """
+        if instrument == Instrument.Future:
+            highestVolume = -1
+            priceAtVolume = -1
+            for i in range(len(trade_ticks)):
+                if trade_ticks[i][1] > highestVolume:
+                    highestVolume = trade_ticks[i][1]
+                    priceAtVolume = trade_ticks[i][0]
+            theoPriceAdjustment = (priceAtVolume - self.theoPrice)*0.1
+            self.theoPrice += theoPriceAdjustment
+
         pass

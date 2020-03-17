@@ -2,7 +2,7 @@
   "Engine": {
     "MarketDataFile": "data/day1.csv",
     "MatchEventsFile": "match_events.csv",
-    "Speed": 1.0,
+    "Speed": 9.0,
     "TickInterval": 0.25
   },
   "Execution": {
@@ -33,6 +33,7 @@
   "Traders": {
     "SoloQ": "superbusysorry",
     "ExampleOne": "qwerty",
-    "ExampleTwo": "12345"
+    "ExampleTwo": "12345",
+    "alexs_trader": "crocrox"
   }
 }
