@@ -1,4 +1,6 @@
 import asyncio
+import numpy as np
+import statistics
 
 from typing import List, Tuple
 
@@ -6,6 +8,28 @@ from ready_trader_one import BaseAutoTrader, Instrument, Lifespan, Side
 
 
 class AutoTrader(BaseAutoTrader):
+
+    # Limits
+    activeOrderLimit = 10
+    ordersPerSecondLimit = 20
+    activeVolumeLimit = 200
+    positionLimit = 100
+
+    # Counters
+    currentActiveOrders = 0
+
+    # States
+    bidPrice = 0
+    askPrice = 0
+    middlePrice = 0
+    theoPrice = 0
+    previousPrices = []
+    priceMovingAverage = 0
+    priceDirection = 0
+
+    # Parameters
+    desiredSpread = 
+
     def __init__(self, loop: asyncio.AbstractEventLoop):
         """Initialise a new instance of the AutoTrader class."""
         super(AutoTrader, self).__init__(loop)
@@ -27,6 +51,36 @@ class AutoTrader(BaseAutoTrader):
         prices are reported along with the volume available at each of those
         price levels.
         """
+
+        if instrument == Instrument.Future:
+            weightedAskPrices = []
+            for i in range(len(ask_prices)):
+                weightedAskPrices.append(ask_prices[i]*ask_volumes[i])
+            averageAskPrice = (np.array(weightedAskPrices).mean())/sum(ask_volumes)
+
+            weightedBidPrices = []
+            for i in range(len(bid_prices)):
+                weightedBidPrices.append(bid_prices[i]*bid_volumes[i])
+            averageBidPrice = (np.array(weightedBidPrices).mean())/sum(bid_volumes)
+
+            self.askPrice = averageAskPrice
+            self.bidPrice = averageBidPrice
+
+            allPrices = np.arry(np.concatenate(np.array(weightedAskPrices), np.array(weightedBidPrices)))
+            allVolumes = sum(ask_volumes) + sum(bid_volumes)
+            newMiddlePrice = (allPrices.mean()) / allVolumes
+
+            if self.middlePrice > newMiddlePrice:
+                self.priceDirection = -1
+            else:
+                self.priceDirection = 1
+
+            gapToTheo = newMiddlePrice - (self.middlePrice + newMiddlePrice)/2.0
+
+            self.theoPrice = newMiddlePrice + gapToTheo
+
+
+
         pass
 
     def on_order_status_message(self, client_order_id: int, fill_volume: int, remaining_volume: int, fees: int) -> None:
