@@ -7,3 +7,9 @@ Traceback (most recent call last):
     data = self._sock.recv(self.max_size)
 ConnectionResetError: [Errno 54] Connection reset by peer
 2020-03-16 15:50:31,040 [INFO   ] [APP] closing event loop
+2020-03-18 12:18:54,060 [INFO   ] [APP] example2 started with arguments={.\run.py}
+2020-03-18 12:18:54,063 [INFO   ] [APP] configuration={"Execution":{"Host":"127.0.0.1","Port":12345},"Information":{"AllowBroadcast":false,"Interface":"0.0.0.0","ListenAddress":"239.255.1.1","Port":12346},"TeamName":"ExampleTwo","Secret":"12345"}
+2020-03-18 12:19:34,116 [INFO   ] [APP] closing event loop
+2020-03-18 12:20:09,224 [INFO   ] [APP] example2 started with arguments={.\run.py}
+2020-03-18 12:20:09,224 [INFO   ] [APP] configuration={"Execution":{"Host":"127.0.0.1","Port":12345},"Information":{"AllowBroadcast":false,"Interface":"0.0.0.0","ListenAddress":"239.255.1.1","Port":12346},"TeamName":"ExampleTwo","Secret":"12345"}
+2020-03-18 12:20:30,080 [INFO   ] [APP] closing event loop

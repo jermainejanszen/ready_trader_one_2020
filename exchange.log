@@ -18,3 +18,37 @@
 2020-03-16 15:53:03,160 [INFO   ] [COMPETITOR] 'ExampleOne' closing execution channel at time=156.756315
 2020-03-16 15:57:30,123 [INFO   ] [APP] SIGINT signal received - shutting down...
 2020-03-16 15:57:30,124 [INFO   ] [APP] closing event loop
+2020-03-18 12:18:53,666 [INFO   ] [APP] exchange started with arguments={.\run.py}
+2020-03-18 12:18:53,666 [INFO   ] [APP] configuration={"Engine":{"MarketDataFile":"data/day1.csv","MatchEventsFile":"match_events.csv","Speed":9.0,"TickInterval":0.25},"Execution":{"ListenAddress":"127.0.0.1","Port":12345},"Fees":{"Maker":-0.0001,"Taker":0.0002},"Information":{"AllowBroadcast":false,"Host":"239.255.1.1","Interface":"0.0.0.0","Port":12346},"Instrument":{"EtfClamp":0.002,"TickSize":1.0},"Limits":{"ActiveOrderCountLimit":10,"ActiveVolumeLimit":200,"MessageFrequencyInterval":1.0,"MessageFrequencyLimit":20,"PositionLimit":100},"Traders":{"SoloQ":"superbusysorry","ExampleOne":"qwerty","ExampleTwo":"12345","alexs_trader":"crocrox"}}
+2020-03-18 12:18:53,666 [INFO   ] [CONTROLLER] starting the match
+2020-03-18 12:18:54,071 [INFO   ] [EXECUTION] fd=736 accepted a new connection: peer=127.0.0.1:51239
+2020-03-18 12:18:54,071 [INFO   ] [EXECUTION] fd=752 accepted a new connection: peer=127.0.0.1:51238
+2020-03-18 12:18:54,072 [INFO   ] [EXECUTION] fd=756 accepted a new connection: peer=127.0.0.1:51240
+2020-03-18 12:18:54,072 [INFO   ] [CONTROLLER] 'alexs_trader' is ready!
+2020-03-18 12:18:54,072 [INFO   ] [EXECUTION] fd=736 login successful: name='alexs_trader'
+2020-03-18 12:18:54,072 [INFO   ] [CONTROLLER] 'ExampleTwo' is ready!
+2020-03-18 12:18:54,072 [INFO   ] [EXECUTION] fd=752 login successful: name='ExampleTwo'
+2020-03-18 12:18:54,072 [INFO   ] [CONTROLLER] 'ExampleOne' is ready!
+2020-03-18 12:18:54,072 [INFO   ] [EXECUTION] fd=756 login successful: name='ExampleOne'
+2020-03-18 12:19:13,683 [INFO   ] [CONTROLLER] market open
+2020-03-18 12:19:29,540 [INFO   ] [EXECUTION] fd=736 message frequency limit breached: now=142.731000 value=21 limit=20
+2020-03-18 12:19:29,541 [INFO   ] [COMPETITOR] 'alexs_trader' sent error message: time=142.731000 client_order_id=0 message='message frequency limit breached'
+2020-03-18 12:19:29,541 [INFO   ] [COMPETITOR] 'alexs_trader' closing execution channel at time=142.731000
+2020-03-18 12:19:29,541 [INFO   ] [EXECUTION] fd=756 message frequency limit breached: now=142.731000 value=21 limit=20
+2020-03-18 12:19:29,541 [INFO   ] [COMPETITOR] 'ExampleOne' sent error message: time=142.731000 client_order_id=0 message='message frequency limit breached'
+2020-03-18 12:19:29,541 [INFO   ] [COMPETITOR] 'ExampleOne' closing execution channel at time=142.731000
+2020-03-18 12:19:34,115 [INFO   ] [APP] closing event loop
+2020-03-18 12:20:08,833 [INFO   ] [APP] exchange started with arguments={.\run.py}
+2020-03-18 12:20:08,833 [INFO   ] [APP] configuration={"Engine":{"MarketDataFile":"data/day1.csv","MatchEventsFile":"match_events.csv","Speed":9.0,"TickInterval":0.25},"Execution":{"ListenAddress":"127.0.0.1","Port":12345},"Fees":{"Maker":-0.0001,"Taker":0.0002},"Information":{"AllowBroadcast":false,"Host":"239.255.1.1","Interface":"0.0.0.0","Port":12346},"Instrument":{"EtfClamp":0.002,"TickSize":1.0},"Limits":{"ActiveOrderCountLimit":10,"ActiveVolumeLimit":200,"MessageFrequencyInterval":1.0,"MessageFrequencyLimit":20,"PositionLimit":100},"Traders":{"SoloQ":"superbusysorry","ExampleOne":"qwerty","ExampleTwo":"12345","alexs_trader":"crocrox"}}
+2020-03-18 12:20:08,833 [INFO   ] [CONTROLLER] starting the match
+2020-03-18 12:20:09,226 [INFO   ] [EXECUTION] fd=608 accepted a new connection: peer=127.0.0.1:51259
+2020-03-18 12:20:09,226 [INFO   ] [EXECUTION] fd=624 accepted a new connection: peer=127.0.0.1:51260
+2020-03-18 12:20:09,226 [INFO   ] [CONTROLLER] 'ExampleOne' is ready!
+2020-03-18 12:20:09,226 [INFO   ] [EXECUTION] fd=608 login successful: name='ExampleOne'
+2020-03-18 12:20:09,226 [INFO   ] [CONTROLLER] 'ExampleTwo' is ready!
+2020-03-18 12:20:09,226 [INFO   ] [EXECUTION] fd=624 login successful: name='ExampleTwo'
+2020-03-18 12:20:09,226 [INFO   ] [EXECUTION] fd=764 accepted a new connection: peer=127.0.0.1:51261
+2020-03-18 12:20:09,227 [INFO   ] [CONTROLLER] 'alexs_trader' is ready!
+2020-03-18 12:20:09,227 [INFO   ] [EXECUTION] fd=764 login successful: name='alexs_trader'
+2020-03-18 12:20:28,837 [INFO   ] [CONTROLLER] market open
+2020-03-18 12:20:30,080 [INFO   ] [APP] closing event loop

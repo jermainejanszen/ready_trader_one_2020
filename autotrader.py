@@ -1,6 +1,7 @@
 import asyncio
 import numpy as np
 import statistics
+import itertools
 
 from typing import List, Tuple
 
@@ -17,7 +18,13 @@ class AutoTrader(BaseAutoTrader):
 
     # Counters
     currentActiveOrders = 0
+    currentPositionStanding = 0
+    currentPositionIDs = []
+    currentPositionPrices = []
+    currentPositionVolumes = []
+    currentPositionDirections = []
     highestSequenceNum = -1
+    orderIDs: Iterator[int] = itertools.count(1)
 
     # States
     bidPrice = 0
@@ -85,8 +92,20 @@ class AutoTrader(BaseAutoTrader):
             self.theoPrice = newMiddlePrice + gapToTheo
 
             # Making orders
-
-
+            if self.currentActiveOrders > 10:
+                # Consider cancelling
+                # Consider waiting
+                pass
+            elif self.currentPositionStanding < (-1*self.positionLimit + 5):
+                # Consider cancelling sell orders
+                # Consider buying
+                pass
+            elif self.currentPositionStanding > (self.positionLimit - 5):
+                # Consider cancelling buy orders
+                # Consider selling
+                pass
+            else:
+                pass
         pass
 
     def on_order_status_message(self, client_order_id: int, fill_volume: int, remaining_volume: int, fees: int) -> None:
