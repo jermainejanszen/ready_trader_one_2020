@@ -17,6 +17,7 @@ class AutoTrader(BaseAutoTrader):
     positionLimit = 100
 
     # Counters
+    ordersThisSecond = 0
     currentActiveOrders = 0
     currentPositionStanding = 0
     currentPositionIDs = []
@@ -24,7 +25,7 @@ class AutoTrader(BaseAutoTrader):
     currentPositionVolumes = []
     currentPositionDirections = []
     highestSequenceNum = -1
-    orderIDs = itertools.count(1)
+    orderIDs = 1
 
     # States
     bidPrice = 0
@@ -36,11 +37,12 @@ class AutoTrader(BaseAutoTrader):
     priceDirection = 0
 
     # Parameters
-    desiredSpread = 0.03
+    desiredSpread = 0.05
 
     def __init__(self, loop: asyncio.AbstractEventLoop):
         """Initialise a new instance of the AutoTrader class."""
         super(AutoTrader, self).__init__(loop)
+        self.time = self.event_loop.time()
 
     def on_error_message(self, client_order_id: int, error_message: bytes) -> None:
         """Called when the exchange detects an error.
@@ -64,23 +66,33 @@ class AutoTrader(BaseAutoTrader):
         else:
             self.highestSequenceNum = sequence_number
 
-        if instrument == Instrument.Future:
+        if sum(ask_volumes) == 0 or sum(bid_volumes) == 0:
+            return
+
+        if self.time == int(self.event_loop.time()):
+            if self.ordersThisSecond > 19:
+                return
+        else:
+            self.time = int(self.event_loop.time())
+            self.ordersThisSecond = 0
+
+        if instrument == Instrument.FUTURE:
             weightedAskPrices = []
             for i in range(len(ask_prices)):
                 weightedAskPrices.append(ask_prices[i]*ask_volumes[i])
-            averageAskPrice = (np.array(weightedAskPrices).mean())/sum(ask_volumes)
+            averageAskPrice = (statistics.mean(weightedAskPrices))/sum(ask_volumes)
 
             weightedBidPrices = []
             for i in range(len(bid_prices)):
                 weightedBidPrices.append(bid_prices[i]*bid_volumes[i])
-            averageBidPrice = (np.array(weightedBidPrices).mean())/sum(bid_volumes)
+            averageBidPrice = (statistics.mean(weightedBidPrices))/sum(bid_volumes)
 
             self.askPrice = averageAskPrice
             self.bidPrice = averageBidPrice
 
-            allPrices = np.arry(np.concatenate(np.array(weightedAskPrices), np.array(weightedBidPrices)))
+            allPrices = weightedAskPrices + weightedBidPrices
             allVolumes = sum(ask_volumes) + sum(bid_volumes)
-            newMiddlePrice = (allPrices.mean()) / allVolumes
+            newMiddlePrice = statistics.mean(allPrices) / allVolumes
 
             if self.middlePrice > newMiddlePrice:
                 self.priceDirection = -1
@@ -92,21 +104,94 @@ class AutoTrader(BaseAutoTrader):
             self.theoPrice = newMiddlePrice + gapToTheo
 
             # Making orders
-            if self.currentActiveOrders > 10:
+            if self.currentActiveOrders > 9:
                 # Consider cancelling
+                for i in range(len(self.currentPositionPrices)):
+                    if self.currentPositionDirections[i] == Side.BUY:
+                        if self.currentPositionPrices[i] > self.theoPrice - self.theoPrice*self.desiredSpread:
+                            self.send_cancel_order(self.currentPositionIDs[i])
+                            self.ordersThisSecond += 1
+                            if self.ordersThisSecond > 19:
+                                return
+                    else:
+                        if self.currentPositionPrices[i] < self.theoPrice + self.theoPrice*self.desiredSpread:
+                            self.send_cancel_order(self.currentPositionIDs[i])
+                            self.ordersThisSecond += 1
+                            if self.ordersThisSecond > 19:
+                                return
                 # Consider waiting
-                pass
-            elif self.currentPositionStanding < (-1*self.positionLimit + 5):
+            elif self.currentPositionStanding < (-1*self.positionLimit + 10):
                 # Consider cancelling sell orders
+                for i in range(len(self.currentPositionPrices)):
+                    if self.currentPositionDirections[i] == Side.SELL:
+                        if self.currentPositionPrices[i] < self.theoPrice + self.theoPrice*self.desiredSpread:
+                            self.send_cancel_order(self.currentPositionIDs[i])
+                            self.ordersThisSecond += 1
+                            if self.ordersThisSecond > 19:
+                                return
                 # Consider buying
-                pass
-            elif self.currentPositionStanding > (self.positionLimit - 5):
+                for i in range(len(ask_prices)):
+                    if ask_prices[i] <= self.theoPrice - self.theoPrice*self.desiredSpread:
+                        self.send_insert_order(self.orderIDs, Side.BUY, ask_prices[i], min(min(ask_volumes[i], self.activeVolumeLimit - sum(self.currentPositionVolumes)), min(1, self.activeVolumeLimit - sum(self.currentPositionVolumes))), Lifespan.GOOD_FOR_DAY)
+                        self.orderIDs += 1
+                        self.currentActiveOrders += 1
+                        self.currentPositionIDs.append(self.orderIDs)
+                        self.currentPositionDirections.append(Side.BUY)
+                        self.currentPositionPrices.append(ask_prices[i])
+                        self.currentPositionVolumes.append(min(min(ask_volumes[i], self.activeVolumeLimit - sum(self.currentPositionVolumes)), min(1, self.activeVolumeLimit - sum(self.currentPositionVolumes))))
+                        self.ordersThisSecond += 1
+                        if self.ordersThisSecond > 19:
+                            return
+            elif self.currentPositionStanding > (self.positionLimit - 10):
                 # Consider cancelling buy orders
+                for i in range(len(self.currentPositionPrices)):
+                    if self.currentPositionDirections[i] == Side.BUY:
+                        if self.currentPositionPrices[i] > self.theoPrice - self.theoPrice*self.desiredSpread:
+                            self.send_cancel_order(self.currentPositionIDs[i])
+                            self.ordersThisSecond += 1
+                            if self.ordersThisSecond > 19:
+                                return
                 # Consider selling
-                pass
+                for i in range(len(bid_prices)):
+                    if bid_prices[i] >= self.theoPrice + self.theoPrice*self.desiredSpread:
+                        self.send_insert_order(self.orderIDs, Side.SELL, bid_prices[i], min(min(bid_volumes[i], self.activeVolumeLimit - sum(self.currentPositionVolumes)), min(1, self.activeVolumeLimit - sum(self.currentPositionVolumes))), Lifespan.GOOD_FOR_DAY)
+                        self.orderIDs += 1
+                        self.currentActiveOrders += 1
+                        self.currentPositionIDs.append(self.orderIDs)
+                        self.currentPositionDirections.append(Side.SELL)
+                        self.currentPositionPrices.append(bid_prices[i])
+                        self.currentPositionVolumes.append(min(min(bid_volumes[i], self.activeVolumeLimit - sum(self.currentPositionVolumes)), min(1, self.activeVolumeLimit - sum(self.currentPositionVolumes))))
+                        self.ordersThisSecond += 1
+                        if self.ordersThisSecond > 19:
+                            return
             else:
-                pass
-        pass
+                for i in range(len(ask_prices)):
+                    if ask_prices[i] <= self.theoPrice - self.theoPrice*self.desiredSpread:
+                        self.send_insert_order(self.orderIDs, Side.BUY, ask_prices[i], min(min(ask_volumes[i], self.activeVolumeLimit - sum(self.currentPositionVolumes)), min(1, self.activeVolumeLimit - sum(self.currentPositionVolumes))), Lifespan.GOOD_FOR_DAY)
+                        self.orderIDs += 1
+                        self.currentActiveOrders += 1
+                        self.currentPositionIDs.append(self.orderIDs)
+                        self.currentPositionDirections.append(Side.BUY)
+                        self.currentPositionPrices.append(ask_prices[i])
+                        self.currentPositionVolumes.append(min(min(ask_volumes[i], self.activeVolumeLimit - sum(self.currentPositionVolumes)), min(1, self.activeVolumeLimit - sum(self.currentPositionVolumes))))
+                        self.ordersThisSecond += 1
+                        if self.ordersThisSecond > 19:
+                            return
+                        return
+                for i in range(len(bid_prices)):
+                    if bid_prices[i] >= self.theoPrice + self.theoPrice*self.desiredSpread:
+                        self.send_insert_order(self.orderIDs, Side.SELL, bid_prices[i], min(min(bid_volumes[i], self.activeVolumeLimit - sum(self.currentPositionVolumes)), min(1, self.activeVolumeLimit - sum(self.currentPositionVolumes))), Lifespan.GOOD_FOR_DAY)
+                        self.orderIDs += 1
+                        self.currentActiveOrders += 1
+                        self.currentPositionIDs.append(self.orderIDs)
+                        self.currentPositionDirections.append(Side.SELL)
+                        self.currentPositionPrices.append(bid_prices[i])
+                        self.currentPositionVolumes.append(min(min(bid_volumes[i], self.activeVolumeLimit - sum(self.currentPositionVolumes)), min(1, self.activeVolumeLimit - sum(self.currentPositionVolumes))))
+                        self.ordersThisSecond += 1
+                        if self.ordersThisSecond > 19:
+                            return
+                        return
+        return
 
     def on_order_status_message(self, client_order_id: int, fill_volume: int, remaining_volume: int, fees: int) -> None:
         """Called when the status of one of your orders changes.
@@ -118,7 +203,20 @@ class AutoTrader(BaseAutoTrader):
 
         If an order is cancelled its remaining volume will be zero.
         """
-        pass
+        if not client_order_id in self.currentPositionIDs:
+            return
+
+        if remaining_volume == 0:
+            self.currentActiveOrders -= 1
+            indexInPositions = self.currentPositionIDs.index(client_order_id)
+            self.currentPositionDirections.pop(indexInPositions)
+            self.currentPositionIDs.pop(indexInPositions)
+            self.currentPositionPrices.pop(indexInPositions)
+            self.currentPositionVolumes.pop(indexInPositions)
+        elif fill_volume > 0:
+            indexInPositions = self.currentPositionIDs.index(client_order_id)
+            self.currentPositionVolumes[indexInPositions] = remaining_volume
+        return
 
     def on_position_change_message(self, future_position: int, etf_position: int) -> None:
         """Called when your position changes.
@@ -127,7 +225,8 @@ class AutoTrader(BaseAutoTrader):
         future_position and etf_position will always be the inverse of each
         other (i.e. future_position == -1 * etf_position).
         """
-        pass
+        self.currentPositionStanding = future_position
+        return
 
     def on_trade_ticks_message(self, instrument: int, trade_ticks: List[Tuple[int, int]]) -> None:
         """Called periodically to report trading activity on the market.
@@ -135,7 +234,10 @@ class AutoTrader(BaseAutoTrader):
         Each trade tick is a pair containing a price and the number of lots
         traded at that price since the last trade ticks message.
         """
-        if instrument == Instrument.Future:
+
+        self.time = self.event_loop.time()
+
+        if instrument == Instrument.FUTURE:
             highestVolume = -1
             priceAtVolume = -1
             for i in range(len(trade_ticks)):
@@ -144,5 +246,4 @@ class AutoTrader(BaseAutoTrader):
                     priceAtVolume = trade_ticks[i][0]
             theoPriceAdjustment = (priceAtVolume - self.theoPrice)*0.1
             self.theoPrice += theoPriceAdjustment
-
-        pass
+        return
