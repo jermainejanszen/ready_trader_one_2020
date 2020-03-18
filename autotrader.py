@@ -24,7 +24,7 @@ class AutoTrader(BaseAutoTrader):
     currentPositionVolumes = []
     currentPositionDirections = []
     highestSequenceNum = -1
-    orderIDs: Iterator[int] = itertools.count(1)
+    orderIDs = itertools.count(1)
 
     # States
     bidPrice = 0
@@ -62,7 +62,7 @@ class AutoTrader(BaseAutoTrader):
         if sequence_number < self.highestSequenceNum:
             return
         else:
-            this.highestSequenceNum = sequence_number
+            self.highestSequenceNum = sequence_number
 
         if instrument == Instrument.Future:
             weightedAskPrices = []
