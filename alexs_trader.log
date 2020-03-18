@@ -1,7 +1,0 @@
-2020-03-18 12:18:54,060 [INFO   ] [APP] alexs_trader started with arguments={.\run.py}
-2020-03-18 12:18:54,060 [INFO   ] [APP] configuration={"Execution":{"Host":"127.0.0.1","Port":12345},"Information":{"AllowBroadcast":false,"Interface":"0.0.0.0","ListenAddress":"239.255.1.1","Port":12346},"TeamName":"alexs_trader","Secret":"crocrox"}
-2020-03-18 12:19:29,541 [WARNING] [TRADER] error with order 0: message frequency limit breached
-2020-03-18 12:19:29,541 [INFO   ] [TRADER] lost connection on execution channel
-2020-03-18 12:19:29,541 [INFO   ] [APP] closing event loop
-2020-03-18 12:20:09,224 [INFO   ] [APP] alexs_trader started with arguments={.\run.py}
-2020-03-18 12:20:09,225 [INFO   ] [APP] configuration={"Execution":{"Host":"127.0.0.1","Port":12345},"Information":{"AllowBroadcast":false,"Interface":"0.0.0.0","ListenAddress":"239.255.1.1","Port":12346},"TeamName":"alexs_trader","Secret":"crocrox"}

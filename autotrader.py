@@ -37,7 +37,7 @@ class AutoTrader(BaseAutoTrader):
     priceDirection = 0
 
     # Parameters
-    desiredSpread = 0.05
+    desiredSpread = 0.1
 
     def __init__(self, loop: asyncio.AbstractEventLoop):
         """Initialise a new instance of the AutoTrader class."""
@@ -225,7 +225,7 @@ class AutoTrader(BaseAutoTrader):
         future_position and etf_position will always be the inverse of each
         other (i.e. future_position == -1 * etf_position).
         """
-        self.currentPositionStanding = future_position
+        self.currentPositionStanding = etf_position
         return
 
     def on_trade_ticks_message(self, instrument: int, trade_ticks: List[Tuple[int, int]]) -> None:
