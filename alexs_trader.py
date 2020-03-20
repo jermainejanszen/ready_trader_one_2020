@@ -21,9 +21,27 @@ class AutoTrader(BaseAutoTrader):
     def on_order_book_update_message(self, instrument: int, sequence_number: int, ask_prices: List[int],
                                      ask_volumes: List[int], bid_prices: List[int], bid_volumes: List[int]) -> None:
         """Called periodically to report the status of an order book."""
+        
+        '''if sequence_number < self.highestSequenceNum:
+            return
+        else:
+            self.highestSequenceNum = sequence_number
+
+        if sum(ask_volumes) == 0 or sum(bid_volumes) == 0:
+            return
+
+        if self.time == int(self.event_loop.time()):
+            if self.ordersThisSecond > 19:
+                return
+        else:
+            self.time = int(self.event_loop.time())
+            self.ordersThisSecond = 0'''
+
         if instrument == Instrument.FUTURE:
             best_bid = bid_prices[0]
             best_ask = ask_prices[0]
+
+
 
             if self.bid_id != 0 and best_bid != self.bid_price and best_bid != 0:
                 self.send_cancel_order(self.bid_id)

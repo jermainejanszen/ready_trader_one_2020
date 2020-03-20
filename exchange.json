@@ -1,6 +1,6 @@
 {
   "Engine": {
-    "MarketDataFile": "data/day2.csv",
+    "MarketDataFile": "data/day6.csv",
     "MatchEventsFile": "match_events.csv",
     "Speed": 1.0,
     "TickInterval": 0.25
