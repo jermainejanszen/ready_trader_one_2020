@@ -43,6 +43,15 @@ class AutoTrader(BaseAutoTrader):
         """Initialise a new instance of the AutoTrader class."""
         super(AutoTrader, self).__init__(loop)
         self.time = self.event_loop.time()
+    
+    def addOrder(self, client_order_id: int, side: Side, price: int, volume: int):
+        self.orderIDs += 1
+        self.currentActiveOrders += 1
+        self.currentPositionIDs.append(client_order_id)
+        self.currentPositionDirections.append(side)
+        self.currentPositionPrices.append(price)
+        self.currentPositionVolumes.append(volume)
+        return
 
     def on_error_message(self, client_order_id: int, error_message: bytes) -> None:
         """Called when the exchange detects an error.
@@ -156,12 +165,7 @@ class AutoTrader(BaseAutoTrader):
                         continue
                     if ask_prices[i] <= maxBuy:
                         self.send_insert_order(self.orderIDs, Side.BUY, ask_prices[i], 1, Lifespan.FILL_AND_KILL)
-                        self.orderIDs += 1
-                        self.currentActiveOrders += 1
-                        self.currentPositionIDs.append(self.orderIDs)
-                        self.currentPositionDirections.append(Side.BUY)
-                        self.currentPositionPrices.append(ask_prices[i])
-                        self.currentPositionVolumes.append(1)
+                        self.addOrder(self.orderIDs, Side.BUY, ask_prices[i], 1)
                         self.ordersThisSecond += 1
                         if self.ordersThisSecond > 19:
                             return
@@ -180,12 +184,7 @@ class AutoTrader(BaseAutoTrader):
                         continue
                     if bid_prices[i] >= minSell:
                         self.send_insert_order(self.orderIDs, Side.SELL, bid_prices[i], 1, Lifespan.FILL_AND_KILL)
-                        self.orderIDs += 1
-                        self.currentActiveOrders += 1
-                        self.currentPositionIDs.append(self.orderIDs)
-                        self.currentPositionDirections.append(Side.SELL)
-                        self.currentPositionPrices.append(bid_prices[i])
-                        self.currentPositionVolumes.append(1)
+                        self.addOrder(self.orderIDs, Side.SELL, bid_prices[i], 1)
                         self.ordersThisSecond += 1
                         if self.ordersThisSecond > 19:
                             return
@@ -195,12 +194,7 @@ class AutoTrader(BaseAutoTrader):
                         continue
                     if ask_prices[i] <= maxBuy:
                         self.send_insert_order(self.orderIDs, Side.BUY, ask_prices[i], 1, Lifespan.FILL_AND_KILL)
-                        self.orderIDs += 1
-                        self.currentActiveOrders += 1
-                        self.currentPositionIDs.append(self.orderIDs)
-                        self.currentPositionDirections.append(Side.BUY)
-                        self.currentPositionPrices.append(ask_prices[i])
-                        self.currentPositionVolumes.append(1)
+                        self.addOrder(self.orderIDs, Side.BUY, ask_prices[i], 1)
                         self.ordersThisSecond += 1
                         if self.ordersThisSecond > 19:
                             return
@@ -210,16 +204,30 @@ class AutoTrader(BaseAutoTrader):
                         continue
                     if bid_prices[i] >= minSell:
                         self.send_insert_order(self.orderIDs, Side.SELL, bid_prices[i], 1, Lifespan.FILL_AND_KILL)
-                        self.orderIDs += 1
-                        self.currentActiveOrders += 1
-                        self.currentPositionIDs.append(self.orderIDs)
-                        self.currentPositionDirections.append(Side.SELL)
-                        self.currentPositionPrices.append(bid_prices[i])
-                        self.currentPositionVolumes.append(1)
+                        self.addOrder(self.orderIDs, Side.SELL, bid_prices[i], 1)
                         self.ordersThisSecond += 1
                         if self.ordersThisSecond > 19:
                             return
                         return
+                
+                # Place new orders
+                if self.currentPositionStanding > 10:
+                    self.send_insert_order(self.orderIDs, Side.SELL, round(minSell, -2), 1, Lifespan.GOOD_FOR_DAY)
+                    self.addOrder(self.orderIDs, Side.SELL, round(minSell, -2), 1)
+                elif self.currentPositionStanding < -10:
+                    self.send_insert_order(self.orderIDs, Side.BUY, round(maxBuy, -2), 1, Lifespan.GOOD_FOR_DAY)
+                    self.addOrder(self.orderIDs, Side.BUY, round(maxBuy, -2), 1)
+                else:
+                    self.send_insert_order(self.orderIDs, Side.SELL, round(minSell, -2), 1, Lifespan.GOOD_FOR_DAY)
+                    self.addOrder(self.orderIDs, Side.SELL, round(minSell, -2), 1)
+                    self.ordersThisSecond += 1
+                    if self.ordersThisSecond > 19:
+                        return
+                    self.send_insert_order(self.orderIDs, Side.BUY, round(maxBuy, -2), 1, Lifespan.GOOD_FOR_DAY)
+                    self.addOrder(self.orderIDs, Side.BUY, round(maxBuy, -2), 1)
+                self.ordersThisSecond += 1
+                if self.ordersThisSecond > 19:
+                    return
         return
 
     def on_order_status_message(self, client_order_id: int, fill_volume: int, remaining_volume: int, fees: int) -> None:
