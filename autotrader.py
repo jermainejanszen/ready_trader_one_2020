@@ -103,9 +103,6 @@ class AutoTrader(BaseAutoTrader):
             self.askPrice = averageAskPrice/.2
             self.bidPrice = averageBidPrice/.2
 
-            print("Current position: {}     Orders this second: {}".format(self.currentPositionStanding, self.ordersThisSecond))
-            print("Average ask: {}\nAverage bid: {}".format(self.askPrice, self.bidPrice))
-
             newMiddlePrice = statistics.mean([self.askPrice, self.bidPrice])
 
             self.previousPrices.append(statistics.mean([ask_prices[0], bid_prices[0]]))
@@ -124,12 +121,8 @@ class AutoTrader(BaseAutoTrader):
             self.theoPrice = round((self.theoPrice + (newMiddlePrice + self.priceDirection*(gapToTheo)))/2.0)
             self.middlePrice = newMiddlePrice
 
-            print("Theo price: {}".format(self.theoPrice))
-
             minSell = round(self.theoPrice + self.theoPrice*self.desiredSpread)
             maxBuy = round(self.theoPrice - self.theoPrice*self.desiredSpread)
-            print("Min sell: {}     Max buy: {}".format(minSell, maxBuy))
-            print(".....................................................")
 
             # Making orders
             if self.currentActiveOrders > self.activeOrderLimit - 2:
@@ -170,7 +163,7 @@ class AutoTrader(BaseAutoTrader):
                         if ask_prices[i] in self.currentPositionPrices:
                             self.send_cancel_order(self.currentPositionIDs[self.currentPositionPrices.index(ask_prices[i])])
                         self.send_insert_order(self.orderIDs, Side.BUY, ask_prices[i], min(90, ask_volumes[i]), Lifespan.GOOD_FOR_DAY)
-                        self.addOrder(self.orderIDs, Side.BUY, ask_prices[i], 1)
+                        self.addOrder(self.orderIDs, Side.BUY, ask_prices[i], min(90, ask_volumes[i]))
                         self.ordersThisSecond += 1
                         if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                             return
@@ -192,7 +185,7 @@ class AutoTrader(BaseAutoTrader):
                         if bid_prices[i] in self.currentPositionPrices:
                             self.send_cancel_order(self.currentPositionIDs[self.currentPositionPrices.index(bid_prices[i])])
                         self.send_insert_order(self.orderIDs, Side.SELL, bid_prices[i], min(90, bid_volumes[i]), Lifespan.GOOD_FOR_DAY)
-                        self.addOrder(self.orderIDs, Side.SELL, bid_prices[i], 1)
+                        self.addOrder(self.orderIDs, Side.SELL, bid_prices[i], min(90, bid_volumes[i]))
                         self.ordersThisSecond += 1
                         if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                             return
@@ -205,7 +198,7 @@ class AutoTrader(BaseAutoTrader):
                         if ask_prices[i] in self.currentPositionPrices:
                             continue
                         self.send_insert_order(self.orderIDs, Side.BUY, ask_prices[i], min(ask_volumes[i], self.positionLimit - abs(self.currentPositionStanding) - 1), Lifespan.FILL_AND_KILL)
-                        self.addOrder(self.orderIDs, Side.BUY, ask_prices[i], 1)
+                        self.addOrder(self.orderIDs, Side.BUY, ask_prices[i], min(ask_volumes[i], self.positionLimit - abs(self.currentPositionStanding) - 1))
                         self.ordersThisSecond += 1
                         if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                             return
@@ -217,7 +210,7 @@ class AutoTrader(BaseAutoTrader):
                         if bid_prices[i] in self.currentPositionPrices:
                             continue
                         self.send_insert_order(self.orderIDs, Side.SELL, bid_prices[i], min(bid_volumes[i], self.positionLimit - abs(self.currentPositionStanding) - 1), Lifespan.FILL_AND_KILL)
-                        self.addOrder(self.orderIDs, Side.SELL, bid_prices[i], 1)
+                        self.addOrder(self.orderIDs, Side.SELL, bid_prices[i], min(bid_volumes[i], self.positionLimit - abs(self.currentPositionStanding) - 1))
                         self.ordersThisSecond += 1
                         if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                             return
@@ -231,25 +224,25 @@ class AutoTrader(BaseAutoTrader):
                 if self.previousPrices[0] - self.previousPrices[-1] > 0:
                     # Price has fallen - so buy
                     self.send_insert_order(self.orderIDs, Side.BUY, ask_prices[0] + 100, min(20, self.positionLimit - abs(self.currentPositionStanding) - 1), Lifespan.GOOD_FOR_DAY)
-                    self.addOrder(self.orderIDs, Side.BUY, ask_prices[0] + 100, 5)
+                    self.addOrder(self.orderIDs, Side.BUY, ask_prices[0] + 100, min(20, self.positionLimit - abs(self.currentPositionStanding) - 1))
                     self.ordersThisSecond += 1
                     if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                         return
                 elif self.previousPrices[0] - self.previousPrices[-1] < 0:
                     # Price has rissen - so sell
                     self.send_insert_order(self.orderIDs, Side.SELL, bid_prices[0] - 100, min(20, self.positionLimit - abs(self.currentPositionStanding) - 1), Lifespan.GOOD_FOR_DAY)
-                    self.addOrder(self.orderIDs, Side.SELL, bid_prices[0] - 100, 5)
+                    self.addOrder(self.orderIDs, Side.SELL, bid_prices[0] - 100, min(20, self.positionLimit - abs(self.currentPositionStanding) - 1))
                     self.ordersThisSecond += 1
                     if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                         return
                 else:
                     self.send_insert_order(self.orderIDs, Side.BUY, ask_prices[0], min(20, self.positionLimit - abs(self.currentPositionStanding) - 1), Lifespan.GOOD_FOR_DAY)
-                    self.addOrder(self.orderIDs, Side.BUY, ask_prices[0] + 100, 5)
+                    self.addOrder(self.orderIDs, Side.BUY, ask_prices[0] + 100, min(20, self.positionLimit - abs(self.currentPositionStanding) - 1))
                     self.ordersThisSecond += 1
                     if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                         return
                     self.send_insert_order(self.orderIDs, Side.SELL, bid_prices[0], min(20, self.positionLimit - abs(self.currentPositionStanding) - 1), Lifespan.GOOD_FOR_DAY)
-                    self.addOrder(self.orderIDs, Side.SELL, bid_prices[0] - 100, 5)
+                    self.addOrder(self.orderIDs, Side.SELL, bid_prices[0] - 100, min(20, self.positionLimit - abs(self.currentPositionStanding) - 1))
                     self.ordersThisSecond += 1
                     if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                         return
