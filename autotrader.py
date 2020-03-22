@@ -12,7 +12,7 @@ class AutoTrader(BaseAutoTrader):
 
     # Limits
     activeOrderLimit = 10
-    ordersPerSecondLimit = 20
+    ordersPerSecondLimit = 20/2
     activeVolumeLimit = 200
     positionLimit = 100
 
@@ -59,10 +59,6 @@ class AutoTrader(BaseAutoTrader):
         If the error pertains to a particular order, then the client_order_id
         will identify that order, otherwise the client_order_id will be zero.
         """
-        if client_order_id in self.currentPositionIDs:
-            index = self.currentPositionIDs.index(client_order_id)
-            if self.currentPositionDirections[index] == Side.BUY:
-                print("Error buying")
         pass
 
     def on_order_book_update_message(self, instrument: int, sequence_number: int, ask_prices: List[int],
@@ -83,7 +79,7 @@ class AutoTrader(BaseAutoTrader):
             return
 
         if self.time == int(self.event_loop.time()):
-            if self.ordersThisSecond > 19:
+            if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                 return
         else:
             self.time = int(self.event_loop.time())
@@ -107,10 +103,12 @@ class AutoTrader(BaseAutoTrader):
             self.askPrice = averageAskPrice/.2
             self.bidPrice = averageBidPrice/.2
 
-            print("Current position: {}".format(self.currentPositionStanding))
+            print("Current position: {}     Orders this second: {}".format(self.currentPositionStanding, self.ordersThisSecond))
             print("Average ask: {}\nAverage bid: {}".format(self.askPrice, self.bidPrice))
 
             newMiddlePrice = statistics.mean([self.askPrice, self.bidPrice])
+
+            self.previousPrices.append(statistics.mean([ask_prices[0], bid_prices[0]]))
 
             if self.middlePrice == 0 and self.theoPrice == 0:
                 self.middlePrice = newMiddlePrice
@@ -121,7 +119,7 @@ class AutoTrader(BaseAutoTrader):
             else:
                 self.priceDirection = 1
 
-            gapToTheo = abs(newMiddlePrice - (self.middlePrice + newMiddlePrice)/2.0)*2
+            gapToTheo = abs(newMiddlePrice - (self.middlePrice + newMiddlePrice)/2.0)*15
 
             self.theoPrice = round((self.theoPrice + (newMiddlePrice + self.priceDirection*(gapToTheo)))/2.0)
             self.middlePrice = newMiddlePrice
@@ -131,103 +129,131 @@ class AutoTrader(BaseAutoTrader):
             minSell = round(self.theoPrice + self.theoPrice*self.desiredSpread)
             maxBuy = round(self.theoPrice - self.theoPrice*self.desiredSpread)
             print("Min sell: {}     Max buy: {}".format(minSell, maxBuy))
-            print("")
+            print(".....................................................")
 
             # Making orders
-            if self.currentActiveOrders > 9:
+            if self.currentActiveOrders > self.activeOrderLimit - 2:
+                cancelledOrders = False
                 # Consider cancelling
                 for i in range(len(self.currentPositionPrices)):
                     if self.currentPositionDirections[i] == Side.BUY:
                         if self.currentPositionPrices[i] > maxBuy:
                             self.send_cancel_order(self.currentPositionIDs[i])
+                            cancelledOrders = True
                             self.ordersThisSecond += 1
-                            if self.ordersThisSecond > 19:
+                            if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                                 return
                     else:
                         if self.currentPositionPrices[i] < minSell:
                             self.send_cancel_order(self.currentPositionIDs[i])
+                            cancelledOrders = True
                             self.ordersThisSecond += 1
-                            if self.ordersThisSecond > 19:
+                            if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                                 return
                 # Consider waiting
-            elif self.currentPositionStanding < (-1*self.positionLimit + 10):
+                if not cancelledOrders:
+                    return
+            if self.currentPositionStanding < -90:
                 # Consider cancelling sell orders
                 for i in range(len(self.currentPositionPrices)):
                     if self.currentPositionDirections[i] == Side.SELL:
                         if self.currentPositionPrices[i] < minSell:
                             self.send_cancel_order(self.currentPositionIDs[i])
                             self.ordersThisSecond += 1
-                            if self.ordersThisSecond > 19:
+                            if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                                 return
                 # Consider buying
                 for i in range(len(ask_prices)):
                     if(ask_prices[i] == 0) :
                         continue
-                    if ask_prices[i] <= maxBuy:
-                        self.send_insert_order(self.orderIDs, Side.BUY, ask_prices[i], 1, Lifespan.FILL_AND_KILL)
+                    if ask_prices[i] <= max(ask_prices):
+                        if ask_prices[i] in self.currentPositionPrices:
+                            self.send_cancel_order(self.currentPositionIDs[self.currentPositionPrices.index(ask_prices[i])])
+                        self.send_insert_order(self.orderIDs, Side.BUY, ask_prices[i], min(90, ask_volumes[i]), Lifespan.GOOD_FOR_DAY)
                         self.addOrder(self.orderIDs, Side.BUY, ask_prices[i], 1)
                         self.ordersThisSecond += 1
-                        if self.ordersThisSecond > 19:
+                        if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                             return
-            elif self.currentPositionStanding > (self.positionLimit - 10):
+                return
+            if self.currentPositionStanding > 90:
                 # Consider cancelling buy orders
                 for i in range(len(self.currentPositionPrices)):
                     if self.currentPositionDirections[i] == Side.BUY:
                         if self.currentPositionPrices[i] > maxBuy:
                             self.send_cancel_order(self.currentPositionIDs[i])
                             self.ordersThisSecond += 1
-                            if self.ordersThisSecond > 19:
+                            if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                                 return
                 # Consider selling
                 for i in range(len(bid_prices)):
                     if(bid_prices[i] == 0) :
                         continue
-                    if bid_prices[i] >= minSell:
-                        self.send_insert_order(self.orderIDs, Side.SELL, bid_prices[i], 1, Lifespan.FILL_AND_KILL)
+                    if bid_prices[i] >= min(bid_prices):
+                        if bid_prices[i] in self.currentPositionPrices:
+                            self.send_cancel_order(self.currentPositionIDs[self.currentPositionPrices.index(bid_prices[i])])
+                        self.send_insert_order(self.orderIDs, Side.SELL, bid_prices[i], min(90, bid_volumes[i]), Lifespan.GOOD_FOR_DAY)
                         self.addOrder(self.orderIDs, Side.SELL, bid_prices[i], 1)
                         self.ordersThisSecond += 1
-                        if self.ordersThisSecond > 19:
+                        if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                             return
+                return
             else:
                 for i in range(len(ask_prices)):
                     if(ask_prices[i] == 0) :
                         continue
                     if ask_prices[i] <= maxBuy:
-                        self.send_insert_order(self.orderIDs, Side.BUY, ask_prices[i], 1, Lifespan.FILL_AND_KILL)
+                        if ask_prices[i] in self.currentPositionPrices:
+                            continue
+                        self.send_insert_order(self.orderIDs, Side.BUY, ask_prices[i], min(ask_volumes[i], self.positionLimit - abs(self.currentPositionStanding) - 1), Lifespan.FILL_AND_KILL)
                         self.addOrder(self.orderIDs, Side.BUY, ask_prices[i], 1)
                         self.ordersThisSecond += 1
-                        if self.ordersThisSecond > 19:
+                        if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                             return
                         return
                 for i in range(len(bid_prices)):
                     if(bid_prices[i] == 0) :
                         continue
                     if bid_prices[i] >= minSell:
-                        self.send_insert_order(self.orderIDs, Side.SELL, bid_prices[i], 1, Lifespan.FILL_AND_KILL)
+                        if bid_prices[i] in self.currentPositionPrices:
+                            continue
+                        self.send_insert_order(self.orderIDs, Side.SELL, bid_prices[i], min(bid_volumes[i], self.positionLimit - abs(self.currentPositionStanding) - 1), Lifespan.FILL_AND_KILL)
                         self.addOrder(self.orderIDs, Side.SELL, bid_prices[i], 1)
                         self.ordersThisSecond += 1
-                        if self.ordersThisSecond > 19:
+                        if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                             return
                         return
                 
-                # Place new orders
-                if self.currentPositionStanding > 10:
-                    self.send_insert_order(self.orderIDs, Side.SELL, round(minSell, -2), 1, Lifespan.GOOD_FOR_DAY)
-                    self.addOrder(self.orderIDs, Side.SELL, round(minSell, -2), 1)
-                elif self.currentPositionStanding < -10:
-                    self.send_insert_order(self.orderIDs, Side.BUY, round(maxBuy, -2), 1, Lifespan.GOOD_FOR_DAY)
-                    self.addOrder(self.orderIDs, Side.BUY, round(maxBuy, -2), 1)
-                else:
-                    self.send_insert_order(self.orderIDs, Side.SELL, round(minSell, -2), 1, Lifespan.GOOD_FOR_DAY)
-                    self.addOrder(self.orderIDs, Side.SELL, round(minSell, -2), 1)
+            if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
+                return
+            # Place new orders
+            if len(self.previousPrices) >= 5:
+                priceChange = abs(self.previousPrices[0] - self.previousPrices[-1])
+                if self.previousPrices[0] - self.previousPrices[-1] > 0:
+                    # Price has fallen - so buy
+                    self.send_insert_order(self.orderIDs, Side.BUY, ask_prices[0] + 100, min(20, self.positionLimit - abs(self.currentPositionStanding) - 1), Lifespan.GOOD_FOR_DAY)
+                    self.addOrder(self.orderIDs, Side.BUY, ask_prices[0] + 100, 5)
                     self.ordersThisSecond += 1
-                    if self.ordersThisSecond > 19:
+                    if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
                         return
-                    self.send_insert_order(self.orderIDs, Side.BUY, round(maxBuy, -2), 1, Lifespan.GOOD_FOR_DAY)
-                    self.addOrder(self.orderIDs, Side.BUY, round(maxBuy, -2), 1)
-                self.ordersThisSecond += 1
-                if self.ordersThisSecond > 19:
-                    return
+                elif self.previousPrices[0] - self.previousPrices[-1] < 0:
+                    # Price has rissen - so sell
+                    self.send_insert_order(self.orderIDs, Side.SELL, bid_prices[0] - 100, min(20, self.positionLimit - abs(self.currentPositionStanding) - 1), Lifespan.GOOD_FOR_DAY)
+                    self.addOrder(self.orderIDs, Side.SELL, bid_prices[0] - 100, 5)
+                    self.ordersThisSecond += 1
+                    if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
+                        return
+                else:
+                    self.send_insert_order(self.orderIDs, Side.BUY, ask_prices[0], min(20, self.positionLimit - abs(self.currentPositionStanding) - 1), Lifespan.GOOD_FOR_DAY)
+                    self.addOrder(self.orderIDs, Side.BUY, ask_prices[0] + 100, 5)
+                    self.ordersThisSecond += 1
+                    if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
+                        return
+                    self.send_insert_order(self.orderIDs, Side.SELL, bid_prices[0], min(20, self.positionLimit - abs(self.currentPositionStanding) - 1), Lifespan.GOOD_FOR_DAY)
+                    self.addOrder(self.orderIDs, Side.SELL, bid_prices[0] - 100, 5)
+                    self.ordersThisSecond += 1
+                    if self.ordersThisSecond > self.ordersPerSecondLimit - 1:
+                        return
+                self.previousPrices.clear()
         return
 
     def on_order_status_message(self, client_order_id: int, fill_volume: int, remaining_volume: int, fees: int) -> None:
@@ -271,8 +297,6 @@ class AutoTrader(BaseAutoTrader):
         Each trade tick is a pair containing a price and the number of lots
         traded at that price since the last trade ticks message.
         """
-
-        self.time = self.event_loop.time()
 
         if instrument == Instrument.FUTURE:
             highestVolume = -1
